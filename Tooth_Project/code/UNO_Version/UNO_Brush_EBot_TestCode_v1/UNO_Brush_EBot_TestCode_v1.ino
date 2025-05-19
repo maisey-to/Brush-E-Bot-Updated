@@ -1,0 +1,261 @@
+// https://xantorohara.github.io/led-matrix-editor
+#include "DS3231.h"
+#include "MAX7219.h"
+#include <SPI.h>
+#include <Wire.h> 
+
+#include <SoftwareSerial.h>
+#include "DFRobotDFPlayerMini.h"
+
+#include "anims.h"
+
+const uint8_t NUMBERS[][10] = {
+  {0b00000000, 0b00001110, 0b00001010, 0b00001010, 0b00001010, 0b00001010, 0b00001110, 0b00000000},
+  {0b00000000, 0b00000100, 0b00000100, 0b00000100, 0b00000100, 0b00000100, 0b00000100, 0b00000000},
+  {0b00000000, 0b00001110, 0b00000010, 0b00001110, 0b00001000, 0b00001000, 0b00001110, 0b00000000},
+  {0b00000000, 0b00001110, 0b00000010, 0b00001110, 0b00000010, 0b00000010, 0b00001110, 0b00000000},
+  {0b00000000, 0b00001010, 0b00001010, 0b00001110, 0b00000010, 0b00000010, 0b00000010, 0b00000000},
+  {0b00000000, 0b00001110, 0b00001000, 0b00001110, 0b00000010, 0b00000010, 0b00001110, 0b00000000},
+  {0b00000000, 0b00001110, 0b00001000, 0b00001110, 0b00001010, 0b00001010, 0b00001110, 0b00000000},
+  {0b00000000, 0b00001110, 0b00001010, 0b00000010, 0b00000010, 0b00000010, 0b00000010, 0b00000000},
+  {0b00000000, 0b00001110, 0b00001010, 0b00001110, 0b00001010, 0b00001010, 0b00001110, 0b00000000},
+  {0b00000000, 0b00001110, 0b00001010, 0b00001110, 0b00000010, 0b00000010, 0b00001110, 0b00000000},
+  {0b00000000, 0b00101110, 0b00101010, 0b00101010, 0b00101010, 0b00101010, 0b00101110, 0b00000000},
+  {0b00000000, 0b00100100, 0b00100100, 0b00100100, 0b00100100, 0b00100100, 0b00100100, 0b00000000},
+  {0b00000000, 0b00101110, 0b00100010, 0b00101110, 0b00101000, 0b00101000, 0b00101110, 0b00000000},
+  {0b00000000, 0b00101110, 0b00100010, 0b00101110, 0b00100010, 0b00100010, 0b00101110, 0b00000000},
+  {0b00000000, 0b00101010, 0b00101010, 0b00101110, 0b00100010, 0b00100010, 0b00100010, 0b00000000},
+  {0b00000000, 0b00101110, 0b00101000, 0b00101110, 0b00100010, 0b00100010, 0b00101110, 0b00000000},
+  {0b00000000, 0b00101110, 0b00101000, 0b00101110, 0b00101010, 0b00101010, 0b00101110, 0b00000000},
+  {0b00000000, 0b00101110, 0b00101010, 0b00100010, 0b00100010, 0b00100010, 0b00100010, 0b00000000},
+  {0b00000000, 0b00101110, 0b00101010, 0b00101110, 0b00101010, 0b00101010, 0b00101110, 0b00000000},
+  {0b00000000, 0b00101110, 0b00101010, 0b00101110, 0b00100010, 0b00100010, 0b00101110, 0b00000000},
+  {0b00000000, 0b11101110, 0b00101010, 0b11101010, 0b10001010, 0b10001010, 0b11101110, 0b00000000},
+  {0b00000000, 0b11100100, 0b00100100, 0b11100100, 0b10000100, 0b10000100, 0b11100100, 0b00000000},
+  {0b00000000, 0b11101110, 0b00100010, 0b11101110, 0b10001000, 0b10001000, 0b11101110, 0b00000000},
+  {0b00000000, 0b11101110, 0b00100010, 0b11101110, 0b10000010, 0b10000010, 0b11101110, 0b00000000},
+  {0b00000000, 0b11101010, 0b00101010, 0b11101110, 0b10000010, 0b10000010, 0b11100010, 0b00000000},
+  {0b00000000, 0b11101110, 0b00101000, 0b11101110, 0b10000010, 0b10000010, 0b11101110, 0b00000000},
+  {0b00000000, 0b11101110, 0b00101000, 0b11101110, 0b10001010, 0b10001010, 0b11101110, 0b00000000},
+  {0b00000000, 0b11101110, 0b00101010, 0b11100010, 0b10000010, 0b10000010, 0b11100010, 0b00000000},
+  {0b00000000, 0b11101110, 0b00101010, 0b11101110, 0b10001010, 0b10001010, 0b11101110, 0b00000000},
+  {0b00000000, 0b11101110, 0b00101010, 0b11101110, 0b10000010, 0b10000010, 0b11101110, 0b00000000},
+  {0b00000000, 0b11101110, 0b00101010, 0b11101010, 0b00101010, 0b00101010, 0b11101110, 0b00000000},
+  {0b00000000, 0b11100100, 0b00100100, 0b11100100, 0b00100100, 0b00100100, 0b11100100, 0b00000000},
+  {0b00000000, 0b11101110, 0b00100010, 0b11101110, 0b00101000, 0b00101000, 0b11101110, 0b00000000},
+  {0b00000000, 0b11101110, 0b00100010, 0b11101110, 0b00100010, 0b00100010, 0b11101110, 0b00000000},
+  {0b00000000, 0b11101010, 0b00101010, 0b11101110, 0b00100010, 0b00100010, 0b11100010, 0b00000000},
+  {0b00000000, 0b11101110, 0b00101000, 0b11101110, 0b00100010, 0b00100010, 0b11101110, 0b00000000},
+  {0b00000000, 0b11101110, 0b00101000, 0b11101110, 0b00101010, 0b00101010, 0b11101110, 0b00000000},
+  {0b00000000, 0b11101110, 0b00101010, 0b11100010, 0b00100010, 0b00100010, 0b11100010, 0b00000000},
+  {0b00000000, 0b11101110, 0b00101010, 0b11101110, 0b00101010, 0b00101010, 0b11101110, 0b00000000},
+  {0b00000000, 0b11101110, 0b00101010, 0b11101110, 0b00100010, 0b00100010, 0b11101110, 0b00000000},
+  {0b00000000, 0b10101110, 0b10101010, 0b11101010, 0b00101010, 0b00101010, 0b00101110, 0b00000000},
+  {0b00000000, 0b10100100, 0b10100100, 0b11100100, 0b00100100, 0b00100100, 0b00100100, 0b00000000},
+  {0b00000000, 0b10101110, 0b10100010, 0b11101110, 0b00101000, 0b00101000, 0b00101110, 0b00000000},
+  {0b00000000, 0b10101110, 0b10100010, 0b11101110, 0b00100010, 0b00100010, 0b00101110, 0b00000000},
+  {0b00000000, 0b10101010, 0b10101010, 0b11101110, 0b00100010, 0b00100010, 0b00100010, 0b00000000},
+  {0b00000000, 0b10101110, 0b10101000, 0b11101110, 0b00100010, 0b00100010, 0b00101110, 0b00000000},
+  {0b00000000, 0b10101110, 0b10101000, 0b11101110, 0b00101010, 0b00101010, 0b00101110, 0b00000000},
+  {0b00000000, 0b10101110, 0b10101010, 0b11100010, 0b00100010, 0b00100010, 0b00100010, 0b00000000},
+  {0b00000000, 0b10101110, 0b10101010, 0b11101110, 0b00101010, 0b00101010, 0b00101110, 0b00000000},
+  {0b00000000, 0b10101110, 0b10101010, 0b11101110, 0b00100010, 0b00100010, 0b00100010, 0b00000000},
+  {0b00000000, 0b11101110, 0b10001010, 0b11101010, 0b00101010, 0b00101010, 0b11101110, 0b00000000},
+  {0b00000000, 0b11100100, 0b10000100, 0b11100100, 0b00100100, 0b00100100, 0b11100100, 0b00000000},
+  {0b00000000, 0b11101110, 0b10000010, 0b11101110, 0b00101000, 0b00101000, 0b11101110, 0b00000000},
+  {0b00000000, 0b11101110, 0b10000010, 0b11101110, 0b00100010, 0b00100010, 0b11101110, 0b00000000},
+  {0b00000000, 0b11101010, 0b10001010, 0b11101110, 0b00100010, 0b00100010, 0b11100010, 0b00000000},
+  {0b00000000, 0b11101110, 0b10001000, 0b11101110, 0b00100010, 0b00100010, 0b11101110, 0b00000000},
+  {0b00000000, 0b11101110, 0b10001000, 0b11101110, 0b00101010, 0b00101010, 0b11101110, 0b00000000},
+  {0b00000000, 0b11101110, 0b10001010, 0b11100010, 0b00100010, 0b00100010, 0b11100010, 0b00000000},
+  {0b00000000, 0b11101110, 0b10001010, 0b11101110, 0b00101010, 0b00101010, 0b11101110, 0b00000000},
+  {0b00000000, 0b11101110, 0b10001010, 0b11101110, 0b00100010, 0b00100010, 0b11100010, 0b00000000}
+};  // Numbers from 0 to 59
+
+const int NUMBERS_LEN = sizeof(NUMBERS)/8;
+
+// All of the animations, in pairs of two, one for each eye
+const Anim *const ANIM_LIST[26] = {
+    &ANIM_OPEN_EYES,
+    &ANIM_OPEN_EYES,
+    &ANIM_WAIT_LEFT,
+    &ANIM_WAIT_RIGHT,
+    &ANIM_COUNTDOWN,
+    &ANIM_COUNTDOWN,
+    &ANIM_UPPER_LEFT_LEFT,
+    &ANIM_UPPER_LEFT_RIGHT,
+    &ANIM_COUNTDOWN,
+    &ANIM_COUNTDOWN,
+    &ANIM_UPPER_RIGHT_LEFT,
+    &ANIM_UPPER_RIGHT_RIGHT,
+    &ANIM_COUNTDOWN,
+    &ANIM_COUNTDOWN,
+    &ANIM_LOWER_LEFT_LEFT,
+    &ANIM_LOWER_LEFT_RIGHT,
+    &ANIM_COUNTDOWN,
+    &ANIM_COUNTDOWN,
+    &ANIM_LOWER_RIGHT_LEFT,
+    &ANIM_LOWER_RIGHT_RIGHT,
+    &ANIM_COUNTDOWN,
+    &ANIM_COUNTDOWN,
+    &ANIM_EXCITED_EYES,
+    &ANIM_EXCITED_EYES,
+    &ANIM_CLOSE_EYES,
+    &ANIM_CLOSE_EYES
+};
+
+
+// Pointers to the current animation
+const Anim *current_anim_left;
+const Anim *current_anim_right;
+
+// Track different pieces of information about each animation
+int current_anim_duration = 0;
+int current_anim_num_frames = 0;
+long current_anim_start_time = 0;
+
+// The duration that each animation should play for
+//   0: play once
+//   > 0: play for x number of seconds
+//   < 0: take x seconds to play once
+//   Differentiate between animations that need to play in a 
+//   certain amount of time (countdown) vs just playing for a certain amount of time (eye movement)
+int ANIM_DURATION[13] = {
+    0,
+    10,
+    -10,
+    20,
+    -10,
+    20,
+    -10,
+    20,
+    -10,
+    20,
+    -10,
+    10,
+    0
+};
+
+// Number of frames in each animation in the sequence
+int anim_frame_count[13] = {
+    7,
+    8,
+    40,
+    12,
+    40,
+    12,
+    40,
+    13,
+    40,
+    13,
+    40,
+    8,
+    7
+};
+
+// Track the status of each animation phase
+//    0 = not complete
+//    1 = complete
+int phase_complete[13] = {
+    0,
+    0,
+    0,
+    0,
+    0,
+    0,
+    0,
+    0,
+    0,
+    0,
+    0,
+    0,
+    0
+};
+
+#define FRAME_RATE 250  // ms
+#define MAX_COUNTER 10
+
+SoftwareSerial openLog(2, 3); // RX and TX
+
+uint8_t gSecs;
+uint8_t gCounter = 0;
+
+// *** DF Player Serial *** //
+DFRobotDFPlayerMini music;
+SoftwareSerial miniPlayerSerial(4, 5); // RX and TX
+
+void setup()   {
+  // Init SPI Pins
+  pinMode(CS, OUTPUT);
+
+  // Start I2C
+  Wire.begin();
+
+  // Start SPI
+  SPI.begin();
+  
+  // Init and Configure LED Matrix
+  spiWriteRegister(DISPLAY_TEST, 0x01);  // Run test - All LED segments lit.
+  delay(1000);
+  spiWriteRegister(DISPLAY_TEST, 0x00);  // Finish test mode.
+
+  spiWriteRegister(DECODE_MODE, 0x00);  // Disable BCD mode. 
+  spiWriteRegister(INTENSITY, 0x01);  // Use lowest intensity.   
+  spiWriteRegister(SCAN_LIMIT, 0x0F);  // Scan all digits.
+  spiWriteRegister(SHUTDOWN, 0x01);  // Turn on chip.
+
+  // Init Open Log
+  openLog.begin(9600);
+  delay(1000);  // Give openLog time to initialize
+
+  // Init Mini Player
+  miniPlayerSerial.begin(9600);
+
+  if (!music.begin(miniPlayerSerial, true, true)) {
+    //Serial.println(F("Not initialized:"));
+    //Serial.println(F("1. Check the DFPlayer Mini connections"));
+    //Serial.println(F("2. Insert an SD card"));
+    while (true);
+  }
+
+  // Init Mini Player
+  music.volume(10);        // Max Volume 30
+
+  // Initialize values to first animation
+  current_anim_duration = ANIM_DURATION[0];
+  current_anim_left = ANIM_LIST[0];
+  current_anim_right = ANIM_LIST[1];
+  current_anim_start_time = millis();
+  current_anim_num_frames = anim_frame_count[0];
+}
+
+void loop()  {
+
+  // Check gCounter and save data to openLog
+  if(gCounter == MAX_COUNTER){
+    gCounter = 0;
+    // read RTC value
+    gSecs = readTimeRegister(DS3231_SECONDS)%60;
+    
+    // Save it to openLog
+    openLog.print("Time Stamp: ");
+    openLog.println(gSecs);
+
+    //music.playFolder(1, 1);
+    music.play(1);
+  }
+
+  // Render eyes
+  for (int i=1;i<9;i++){
+    //spiWriteRegister(i, NUMBERS[gSecs][i-1]);
+    spiWriteRegister(i, data_eye_blink[i-1]);
+  }
+
+  // increment counter
+  gCounter++;
+
+  // frame rate delay
+  delay(FRAME_RATE);
+}
+
+
