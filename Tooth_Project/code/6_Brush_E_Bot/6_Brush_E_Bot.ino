@@ -1,6 +1,12 @@
+// Eye animations
 #include <MD_MAX72XX.h>
 #include <SPI.h>
 #include <ANIMS.h>
+
+// Logging and timing
+#include "DS3231.h"
+#include <HardwareSerial.h>
+#include <Wire.h>
 
 // -- LED Matrix Constants -- //
 #define HARDWARE_TYPE MD_MAX72XX::PAROLA_HW
@@ -9,12 +15,31 @@
 #define DATA_PIN 23    // MOSI
 #define CLK_PIN 18     // SCK
 
-// Timing constants
+// -- Logging and Timing Constants -- //
+#define UART_TX 22
+#define UART_RX 21
+
+#define I2C_SDA 4
+#define I2C_SCL 5
+
+// -- Audio Constants -- //
+#define RXD2 16
+#define TXD2 17
+
+// -- Timing constants -- //
 #define FRAME_RATE 5 // Frames per second
 #define FRAME_DELAY = 1000 / FRAME_RATE // ms
 
+
 // Create display object using hardware SPI
 MD_MAX72XX gEyeMatrices = MD_MAX72XX(HARDWARE_TYPE, CS_PIN, MAX_DEVICES);
+
+// Serial interface for OpenLog
+HardwareSerial openLog(1); // Use UART1
+
+// DF Player Serial
+DFRobotDFPlayerMini music;
+
 
 // Display a single frame of an animation on the LED matrices
 void displayAnimationFrame(const Anim* anim, uint8_t frame) {
@@ -79,7 +104,10 @@ void loopAnimationForSeconds(const Anim* anim, uint8_t seconds) {
 }
 
 void runCompleteSequence() {
-  // TODO: Log time to openlog from rtc
+  // TODO: Get full datetime from RTC
+  openLog.print("S: ");
+  // TODO:
+  // openLog.println(<datetime>);
 
   // OPEN EYES + START SNIPPET 1
   playAnimationOnce(ANIM_OPEN_EYES);
@@ -133,9 +161,20 @@ void runCompleteSequence() {
 
 
 void setup() {
+  // Init eye matrices
   gEyeMatrices.begin();
   gEyeMatrices.control(MD_MAX72XX::INTENSITY, 5);
   gEyeMatrices.clear();
+
+  // Init OpenLog
+  openLog.begin(9600, SERIAL_8N1, UART_RX, UART_TX);
+  delay(1000);
+
+  // Init RTC
+  Wire.begin(I2C_SDA, I2C_SCL);
+
+  // Run the complete sequence
+  runCompleteSequence();
 }
 
 void loop() {
