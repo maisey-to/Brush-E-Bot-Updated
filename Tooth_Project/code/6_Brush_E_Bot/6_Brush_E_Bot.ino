@@ -8,27 +8,28 @@
 #include <HardwareSerial.h>
 #include <Wire.h>
 
-// -- LED Matrix Constants -- //
+// ** LED Matrix Constants ** //
 #define HARDWARE_TYPE MD_MAX72XX::PAROLA_HW
 #define MAX_DEVICES 2  // Two matrices
 #define CS_PIN 5       // Chip Select
 #define DATA_PIN 23    // MOSI
 #define CLK_PIN 18     // SCK
 
-// -- Logging and Timing Constants -- //
+// ** Logging and Timing Constants ** //
 #define UART_TX 22
 #define UART_RX 21
 
 #define I2C_SDA 4
 #define I2C_SCL 5
 
-// -- Audio Constants -- //
+// ** Audio Constants ** //
 #define RXD2 16
 #define TXD2 17
+#define ANALOG_PIN 15 // For random seed
 
-// -- Timing constants -- //
+// ** Timing constants ** //
 #define FRAME_RATE 5 // Frames per second
-#define FRAME_DELAY = 1000 / FRAME_RATE // ms
+#define FRAME_DELAY 1000 / FRAME_RATE // ms
 
 
 // Create display object using hardware SPI
@@ -36,12 +37,19 @@ MD_MAX72XX gEyeMatrices = MD_MAX72XX(HARDWARE_TYPE, CS_PIN, MAX_DEVICES);
 
 // Serial interface for OpenLog
 HardwareSerial openLog(1); // Use UART1
+uint8_t gSectionNumber = 0; // Section number for logging
 
 // DF Player Serial
 DFRobotDFPlayerMini music;
 
+// ** Music Variables ** //
+long gFolderNumber;
+uint8_t gSongIndex = 2; // Sound effect will be song /001, so music files start at /002
+#define NEXT_SECTION_SFX 1
+#define FINISHED_SFX 6
 
-// Display a single frame of an animation on the LED matrices
+
+// ** Display a single frame of an animation on the LED matrices ** //
 void displayAnimationFrame(const Anim* anim, uint8_t frame) {
   gEyeMatrices.clear();
   
@@ -103,60 +111,101 @@ void loopAnimationForSeconds(const Anim* anim, uint8_t seconds) {
   }
 }
 
+// Plays sound effects
+void playSoundEffect(uint8_t soundIndex) {
+  music.stop(); // Stop any currently playing music
+  music.playFolder(gFolderNumber, soundIndex);
+  delay(1500); // Wait for SFX to finish
+  music.stop();
+}
+
+
 void runCompleteSequence() {
+  
   // TODO: Get full datetime from RTC
   openLog.print("S: ");
   // TODO:
   // openLog.println(<datetime>);
 
+  // *** WAITING SEQUENCE *** //
+
   // OPEN EYES + START SNIPPET 1
   playAnimationOnce(ANIM_OPEN_EYES);
   // TODO: Play music
+  music.playFolder(gFolderNumber, gSongIndex);
+  gSongIndex++; // Increment song index for next snippet
 
   // WAIT
-  loopAnimationForSeconds(ANIM_WAIT, 10);
+  loopAnimationForSeconds(ANIM_WAIT, 20);
 
   // COUNTDOWN
   playAnimationInSeconds(ANIM_COUNTDOWN, 10);
 
+  // SOUND EFFECT
+  playSoundEffect(NEXT_SECTION_SFX);
+
+  // *** BRUSHING SEQUENCE *** //
+  
+  // ** FIRST PHASE ** //
   // UPPER LEFT + START SNIPPET 2
+  music.playFolder(gFolderNumber, gSongIndex);
+  gSongIndex++; // Increment song index for next snippet
   loopAnimationForSeconds(ANIM_UPPER_LEFT, 20);
-  // TODO: Play music snippet 2
 
   // COUNTDOWN
   playAnimationInSeconds(ANIM_COUNTDOWN, 10);
 
   // TODO: Log phase 1 completion
+  openLog.print(gSectionNumber++);
 
+  // SOUND EFFECT
+  playSoundEffect(NEXT_SECTION_SFX);
+
+  // ** SECOND PHASE ** //
+  
   // UPPER RIGHT + COMPLETE SFX + START SNIPPET 3
+  music.playFolder(gFolderNumber, gSongIndex);
+  gSongIndex++; // Increment song index for next snippet
   loopAnimationForSeconds(ANIM_UPPER_RIGHT, 20);
-  // TODO: Play music snippet 3
 
   // COUNTDOWN
   playAnimationInSeconds(ANIM_COUNTDOWN, 10);
 
+  // LOG PHASE 2 COMPLETION
+  openLog.print(gSectionNumber++);
+
+  // SOUND EFFECT
+  playSoundEffect(NEXT_SECTION_SFX);
+
+  // ** THIRD PHASE ** //
+  
   // LOWER LEFT + COMPLETE SFX + START SNIPPET 4
+  music.playFolder(gFolderNumber, gSongIndex);
+  gSongIndex++; // Increment song index for next snippet
   loopAnimationForSeconds(ANIM_LOWER_LEFT, 20);
-  // TODO: Play music snippet 4
 
   // COUNTDOWN
   playAnimationInSeconds(ANIM_COUNTDOWN, 10);
+
+  // LOG PHASE 3 COMPLETION
+  openLog.print(gSectionNumber++);
+
+  // SOUND EFFECT
+  playSoundEffect(NEXT_SECTION_SFX);
+
+  // ** FOURTH PHASE ** //
 
   // LOWER RIGHT + COMPLETE SFX + START SNIPPET 5
+  music.playFolder(gFolderNumber, gSongIndex);
+  gSongIndex++; // Increment song index for next snippet
   loopAnimationForSeconds(ANIM_LOWER_RIGHT, 20);
-  // TODO: Play music snippet 5
 
   // COUNTDOWN
   playAnimationInSeconds(ANIM_COUNTDOWN, 10);
 
   // EXCITED + FINAL SFX
-  // TODO: Play final SFX
+  playSoundEffect(gFolderNumber, FINISHED_SFX);
   loopAnimationForSeconds(ANIM_EXCITED_EYES, 10);
-
-  // TODO: Decide if this is what we want
-  // CLOSE EYES
-  // STOP MUSIC
-
 }
 
 
@@ -173,11 +222,26 @@ void setup() {
   // Init RTC
   Wire.begin(I2C_SDA, I2C_SCL);
 
+  // Code from DFPlayerMini to initialize library
+  Serial2.begin(9600, SERIAL_8N1, RXD2, TXD2);
+  if (!music.begin(Serial2, true, true)) {  //Use serial to communicate with dplayer.
+    Serial.println(F("Unable to begin:"));
+    Serial.println(F("1.Please recheck the connection!"));
+    Serial.println(F("2.Please insert the SD card!"));
+    while(true){
+      delay(0); // Code to compatible with ESP8266 watch dog.
+    }
+  }
+
+    // Init Mini Player
+  randomSeed(analogRead(ANALOG_PIN));
+  gFolderNumber = random(0, 3);
+
   // Run the complete sequence
   runCompleteSequence();
 }
 
 void loop() {
-
+  // Play wait animation until the robot is shut off
   playAnimationOnce(ANIM_WAIT);
 }
