@@ -18,12 +18,13 @@
 #define DATA_PIN 23    // MOSI
 #define CLK_PIN 18     // SCK
 
-// ** Logging and Timing Constants ** //
+// ** OpenLog Pins ** //
 #define UART_TX 22
 #define UART_RX 21
 
-#define I2C_SDA 4
-#define I2C_SCL 5
+// *** RTC Pins *** //
+#define I2C_SDA 13
+#define I2C_SCL 26
 
 // ** Audio Constants ** //
 #define RXD2 16
@@ -51,6 +52,14 @@ uint8_t gSongIndex = 2; // Sound effect will be song /001, so music files start 
 #define NEXT_SECTION_SFX 1
 #define FINISHED_SFX 6
 
+// DEBUGGING
+void print_binary_uint8(uint8_t value) {
+    Serial.print("0b");
+    for (int i = 7; i >= 0; i--) {
+        Serial.print((value >> i) & 1);
+    }
+    Serial.print("\n");
+}
 
 // ** Display a single frame of an animation on the LED matrices ** //
 void displayAnimationFrame(const Anim* anim, uint8_t frame) {
@@ -59,8 +68,10 @@ void displayAnimationFrame(const Anim* anim, uint8_t frame) {
   for (uint8_t row = 0; row < 8; row++) {
     // Set left matrix (device 1)
     gEyeMatrices.setRow(1, row, anim->dataLeft[frame][row]);
+    //print_binary_uint8(anim->dataLeft[frame][row]);
     // Set right matrix (device 0)
     gEyeMatrices.setRow(0, row, anim->dataRight[frame][row]);
+    //print_binary_uint8(anim->dataRight[frame][row]);
   }
 
   gEyeMatrices.update();
@@ -127,13 +138,16 @@ void runCompleteSequence() {
   
   // TODO: Get full datetime from RTC
   openLog.print("S: ");
+  Serial.println("OpenLog print");
   // TODO:
   // openLog.println(<datetime>);
 
   // *** WAITING SEQUENCE *** //
 
   // OPEN EYES + START SNIPPET 1
+  Serial.println("Before Open Eyes");
   playAnimationOnce(&ANIM_OPEN_EYES);
+  Serial.println("After Open Eyes");
   // TODO: Play music
   music.playFolder(gFolderNumber, gSongIndex);
   gSongIndex++; // Increment song index for next snippet
@@ -213,19 +227,26 @@ void runCompleteSequence() {
 
 
 void setup() {
+  // Serial monitor output
+  Serial.begin(9600);
+
   // Init eye matrices
+  Serial.println("Begin eyes");
   gEyeMatrices.begin();
   gEyeMatrices.control(MD_MAX72XX::INTENSITY, 5);
   gEyeMatrices.clear();
 
   // Init OpenLog
+  Serial.println("OpenLog");
   openLog.begin(9600, SERIAL_8N1, UART_RX, UART_TX);
   delay(1000);
 
   // Init RTC
+  Serial.println("RTC");
   Wire.begin(I2C_SDA, I2C_SCL);
 
   // Code from DFPlayerMini to initialize library
+  Serial.println("DF Before If");
   Serial2.begin(9600, SERIAL_8N1, RXD2, TXD2);
   if (!music.begin(Serial2, true, true)) {  //Use serial to communicate with dplayer.
     Serial.println(F("Unable to begin:"));
@@ -235,12 +256,14 @@ void setup() {
       delay(0); // Code to compatible with ESP8266 watch dog.
     }
   }
+  Serial.println("DF After If");
 
     // Init Mini Player
   randomSeed(analogRead(ANALOG_PIN));
   gFolderNumber = random(0, 3);
 
   // Run the complete sequence
+  Serial.println("Begin Comp Sequence");
   runCompleteSequence();
 }
 
