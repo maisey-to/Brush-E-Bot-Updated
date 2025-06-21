@@ -33,7 +33,7 @@
 #define DFPLAYER_RECEIVED_LENGTH 10
 #define DFPLAYER_SEND_LENGTH 10
 
-//#define _DEBUG
+#define _DEBUG
 
 #define TimeOut 0
 #define WrongStack 1

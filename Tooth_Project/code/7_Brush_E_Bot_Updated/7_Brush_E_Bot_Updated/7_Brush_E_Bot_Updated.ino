@@ -61,16 +61,23 @@ void print_binary_uint8(uint8_t value) {
     Serial.print("\n");
 }
 
+uint8_t reverse(uint8_t b) {
+   b = (b & 0xF0) >> 4 | (b & 0x0F) << 4;
+   b = (b & 0xCC) >> 2 | (b & 0x33) << 2;
+   b = (b & 0xAA) >> 1 | (b & 0x55) << 1;
+   return b;
+}
+
 // ** Display a single frame of an animation on the LED matrices ** //
 void displayAnimationFrame(const Anim* anim, uint8_t frame) {
   gEyeMatrices.clear();
   
   for (uint8_t row = 0; row < 8; row++) {
     // Set left matrix (device 1)
-    gEyeMatrices.setRow(1, row, anim->dataLeft[frame][row]);
+    gEyeMatrices.setRow(1, row, reverse(anim->dataLeft[frame][row]));
     //print_binary_uint8(anim->dataLeft[frame][row]);
     // Set right matrix (device 0)
-    gEyeMatrices.setRow(0, row, anim->dataRight[frame][row]);
+    gEyeMatrices.setRow(0, row, reverse(anim->dataRight[frame][row]));
     //print_binary_uint8(anim->dataRight[frame][row]);
   }
 
@@ -110,6 +117,10 @@ void loopAnimationForSeconds(const Anim* anim, uint8_t seconds) {
   uint8_t frameCounter = 0;
 
   while (animCurrentDuration < loopDurationMS) {
+
+    animCurrentTime = millis();
+    animCurrentDuration = animCurrentTime - animStartTime;
+
     displayAnimationFrame(anim, frameCounter);
 
     // If we got to the end, reverse
