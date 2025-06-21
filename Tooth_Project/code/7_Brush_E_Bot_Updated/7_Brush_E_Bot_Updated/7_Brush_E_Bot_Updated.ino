@@ -9,7 +9,7 @@
 #include <Wire.h>
 
 // Music
-#include <DFRobotDFPlayerMini.h>
+#include "DFRobotDFPlayerMini.h"
 
 // ** LED Matrix Constants ** //
 #define HARDWARE_TYPE MD_MAX72XX::PAROLA_HW
