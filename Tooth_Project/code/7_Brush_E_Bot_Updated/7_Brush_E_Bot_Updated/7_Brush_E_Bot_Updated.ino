@@ -50,7 +50,7 @@ DFRobotDFPlayerMini music;
 long gFolderNumber;
 uint8_t gSongIndex = 2; // Sound effect will be song /001, so music files start at /002
 #define NEXT_SECTION_SFX 1
-#define FINISHED_SFX 6
+#define FINISHED_SFX 7
 
 // DEBUGGING
 void print_binary_uint8(uint8_t value) {
@@ -236,6 +236,38 @@ void runCompleteSequence() {
   loopAnimationForSeconds(&ANIM_EXCITED_EYES, 10);
 }
 
+void printFileSystemInfo() {   
+  
+   Serial.print("Player State: ");
+   Serial.println(music.readState()); //read mp3 state
+  
+   Serial.print("Volume: ");
+   Serial.println(music.readVolume()); //read current volume
+  
+   Serial.print("EQ Setting: ");
+   Serial.println(music.readEQ()); //read EQ setting  
+  
+   int folderCount = music.readFolderCounts();
+   Serial.print("Number of Folders: ");
+   Serial.println(folderCount - 1);
+
+   for (int i = 1; i <= folderCount; i++) {
+      int fileCount = music.readFileCountsInFolder(i);
+      Serial.print("   ");
+      if (i == 1) {
+        Serial.print("root folder");
+      } else {
+        Serial.print("folder ");
+        Serial.print(i);
+      }
+      Serial.print(" : ");
+      Serial.print(fileCount);
+      Serial.println(fileCount > 1 ? " files" : " file");
+   }
+  
+  Serial.print("Total Files: ");
+  Serial.println(music.readFileCounts());
+}
 
 void setup() {
   // Serial monitor output
@@ -269,9 +301,17 @@ void setup() {
   }
   Serial.println("DF After If");
 
+  printFileSystemInfo();
+
     // Init Mini Player
-  randomSeed(analogRead(ANALOG_PIN));
-  gFolderNumber = random(0, 3);
+  // randomSeed(analogRead(ANALOG_PIN));
+  // gFolderNumber = random(0, 3);
+
+  music.volume(15);
+  delay(500);
+  music.playFolder(1, 1);
+  // music.play(1);
+  delay(10000);
 
   // Run the complete sequence
   Serial.println("Begin Comp Sequence");
