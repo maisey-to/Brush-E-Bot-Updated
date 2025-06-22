@@ -12,7 +12,7 @@
 #include "DFRobotDFPlayerMini.h"
 
 // ** LED Matrix Constants ** //
-#define HARDWARE_TYPE MD_MAX72XX::PAROLA_HW
+#define HARDWARE_TYPE MD_MAX72XX::FC16_HW
 #define MAX_DEVICES 2  // Two matrices
 #define CS_PIN 5       // Chip Select
 #define DATA_PIN 23    // MOSI
@@ -37,7 +37,7 @@
 
 
 // Create display object using hardware SPI
-MD_MAX72XX gEyeMatrices = MD_MAX72XX(HARDWARE_TYPE, CS_PIN, MAX_DEVICES);
+MD_MAX72XX gEyeMatrices = MD_MAX72XX(HARDWARE_TYPE, DATA_PIN, CLK_PIN, CS_PIN, MAX_DEVICES);
 
 // Serial interface for OpenLog
 HardwareSerial openLog(1); // Use UART1
@@ -64,23 +64,16 @@ void print_binary_uint8(uint8_t value) {
     Serial.print("\n");
 }
 
-uint8_t reverse(uint8_t b) {
-   b = (b & 0xF0) >> 4 | (b & 0x0F) << 4;
-   b = (b & 0xCC) >> 2 | (b & 0x33) << 2;
-   b = (b & 0xAA) >> 1 | (b & 0x55) << 1;
-   return b;
-}
-
 // ** Display a single frame of an animation on the LED matrices ** //
 void displayAnimationFrame(const Anim* anim, uint8_t frame) {
   gEyeMatrices.clear();
   
   for (uint8_t row = 0; row < 8; row++) {
     // Set left matrix (device 1)
-    gEyeMatrices.setRow(1, row, reverse(anim->dataLeft[frame][row]));
+    gEyeMatrices.setRow(1, row, anim->dataLeft[frame][row]);
     //print_binary_uint8(anim->dataLeft[frame][row]);
     // Set right matrix (device 0)
-    gEyeMatrices.setRow(0, row, reverse(anim->dataRight[frame][row]));
+    gEyeMatrices.setRow(0, row, anim->dataRight[frame][row]);
     //print_binary_uint8(anim->dataRight[frame][row]);
   }
 
@@ -123,6 +116,12 @@ void loopAnimationForSeconds(const Anim* anim, uint8_t seconds) {
 
     animCurrentTime = millis();
     animCurrentDuration = animCurrentTime - animStartTime;
+
+    Serial.print("Timing: ");
+    Serial.print(animCurrentDuration);
+    Serial.print("  |  ");
+    Serial.print(loopDurationMS);
+    Serial.println();
 
     displayAnimationFrame(anim, frameCounter);
 
