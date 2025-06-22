@@ -4,9 +4,9 @@
 #include <ANIMS.h>
 
 // Logging and timing
-#include "DS3231.h"
 #include <HardwareSerial.h>
 #include <Wire.h>
+#include <DS3231-RTC.h>
 
 // Music
 #include "DFRobotDFPlayerMini.h"
@@ -45,6 +45,9 @@ uint8_t gSectionNumber = 0; // Section number for logging
 
 // DF Player Serial
 DFRobotDFPlayerMini music;
+
+// RTC Library
+RTClib rtc;
 
 // ** Music Variables ** //
 long gFolderNumber;
@@ -147,11 +150,22 @@ void playSoundEffect(uint8_t soundIndex) {
 
 void runCompleteSequence() {
   
-  // TODO: Get full datetime from RTC
   openLog.print("S: ");
   Serial.println("OpenLog print");
-  // TODO:
-  // openLog.println(<datetime>);
+
+  DateTime now = rtc.now();
+  openLog.print(now.getYear(), DEC);
+  openLog.print('-');
+  openLog.print(now.getMonth(), DEC);
+  openLog.print('-');
+  openLog.print(now.getDay(), DEC);
+  openLog.print(' ');
+  openLog.print(now.getHour(), DEC);
+  openLog.print(':');
+  openLog.print(now.getMinute(), DEC);
+  openLog.print(':');
+  openLog.print(now.getSecond(), DEC);
+  openLog.println();
 
   // *** WAITING SEQUENCE *** //
 
@@ -184,7 +198,7 @@ void runCompleteSequence() {
   playAnimationInSeconds(&ANIM_COUNTDOWN, 10);
 
   // TODO: Log phase 1 completion
-  openLog.print(gSectionNumber++);
+  openLog.println(gSectionNumber++);
 
   // SOUND EFFECT
   playSoundEffect(NEXT_SECTION_SFX);
@@ -200,7 +214,7 @@ void runCompleteSequence() {
   playAnimationInSeconds(&ANIM_COUNTDOWN, 10);
 
   // LOG PHASE 2 COMPLETION
-  openLog.print(gSectionNumber++);
+  openLog.println(gSectionNumber++);
 
   // SOUND EFFECT
   playSoundEffect(NEXT_SECTION_SFX);
@@ -216,7 +230,7 @@ void runCompleteSequence() {
   playAnimationInSeconds(&ANIM_COUNTDOWN, 10);
 
   // LOG PHASE 3 COMPLETION
-  openLog.print(gSectionNumber++);
+  openLog.println(gSectionNumber++);
 
   // SOUND EFFECT
   playSoundEffect(NEXT_SECTION_SFX);
@@ -230,6 +244,9 @@ void runCompleteSequence() {
 
   // COUNTDOWN
   playAnimationInSeconds(&ANIM_COUNTDOWN, 10);
+
+  // LOG PHASE 4 COMPLETION
+  openLog.println(gSectionNumber++);
 
   // EXCITED + FINAL SFX
   playSoundEffect(FINISHED_SFX);
@@ -304,14 +321,8 @@ void setup() {
   printFileSystemInfo();
 
     // Init Mini Player
-  // randomSeed(analogRead(ANALOG_PIN));
-  // gFolderNumber = random(0, 3);
-
-  music.volume(15);
-  delay(500);
-  music.playFolder(1, 1);
-  // music.play(1);
-  delay(10000);
+  randomSeed(analogRead(ANALOG_PIN));
+  gFolderNumber = random(0, 3);
 
   // Run the complete sequence
   Serial.println("Begin Comp Sequence");
