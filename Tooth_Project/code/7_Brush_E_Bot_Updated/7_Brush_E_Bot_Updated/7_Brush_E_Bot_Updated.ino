@@ -117,12 +117,6 @@ void loopAnimationForSeconds(const Anim* anim, uint8_t seconds) {
     animCurrentTime = millis();
     animCurrentDuration = animCurrentTime - animStartTime;
 
-    Serial.print("Timing: ");
-    Serial.print(animCurrentDuration);
-    Serial.print("  |  ");
-    Serial.print(loopDurationMS);
-    Serial.println();
-
     displayAnimationFrame(anim, frameCounter);
 
     // If we got to the end, reverse
@@ -142,7 +136,16 @@ void loopAnimationForSeconds(const Anim* anim, uint8_t seconds) {
 void playSoundEffect(uint8_t soundIndex) {
   music.stop(); // Stop any currently playing music
   music.playFolder(gFolderNumber, soundIndex);
-  delay(1500); // Wait for SFX to finish
+  
+  // Wait for SFX to finish
+  if(soundIndex == 7) {
+    delay(3000);
+  } 
+  else {
+    delay(2500);
+  }
+   
+
   music.stop();
 }
 
@@ -319,9 +322,13 @@ void setup() {
 
   printFileSystemInfo();
 
-    // Init Mini Player
+  // Init Mini Player
   randomSeed(analogRead(ANALOG_PIN));
-  gFolderNumber = random(0, 3);
+  Serial.print("ANALOG NUBMER");
+  Serial.println(ANALOG_PIN);
+  gFolderNumber = random(1, 3);
+  Serial.print("FOLDER NUBMER");
+  Serial.println(gFolderNumber);
 
   // Run the complete sequence
   Serial.println("Begin Comp Sequence");
